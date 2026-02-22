@@ -12,7 +12,7 @@ from .config import (
 DEFAULT_TOP_K = 5
 _pc = Pinecone(api_key=PINECONE_API_KEY)
 
-def search(query: str, top_k: int = DEFAULT_TOP_K) -> List[Dict]:
+def search(query: str, top_k: int = DEFAULT_TOP_K, source_filter: str = None) -> List[Dict]:
     query = query.strip()
     if not query:
         return []
@@ -22,12 +22,16 @@ def search(query: str, top_k: int = DEFAULT_TOP_K) -> List[Dict]:
 
     index = _pc.Index(PINECONE_INDEX_NAME)
 
+    query_params = {
+        "top_k": top_k,
+        "inputs": {"text": query},
+    }
+    if source_filter:
+        query_params["filter"] = {"source": {"$eq": source_filter}}
+
     results = index.search(
         namespace=PINECONE_NAMESPACE,
-        query={
-            "top_k": top_k,
-            "inputs": {"text": query},
-        },
+        query=query_params,
         fields=["chunk_text", "source", "pages"]
     )
 

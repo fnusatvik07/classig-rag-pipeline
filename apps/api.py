@@ -79,6 +79,7 @@ class ChatRequest(BaseModel):
     question: str
     use_reranker: bool = True
     debug: bool = False
+    source: Optional[str] = None
 
 
 class SourceChunk(BaseModel):
@@ -197,6 +198,8 @@ def chat_endpoint(req: ChatRequest):
         # ── TIER 1: Exact Match Cache ──────────────────────────
         if cache:
             normalized = normalize_query(req.question)
+            if req.source:
+                normalized = f"{normalized}|source={req.source}"
             query_hash = hash_query(normalized)
             exact_hit = cache.get_exact(query_hash)
 
@@ -261,11 +264,11 @@ def chat_endpoint(req: ChatRequest):
         logger.info(f"Cache MISS: {req.question[:50]}...")
 
         # Step 1: Retrieve
-        retrieved_chunks = search(req.question)
+        retrieved_chunks = search(req.question, source_filter=req.source)
 
         # Step 2: Rerank if enabled
         if req.use_reranker:
-            reranked_chunks = rerank(req.question)
+            reranked_chunks = rerank(req.question, source_filter=req.source)
             chunks = reranked_chunks
         else:
             chunks = retrieved_chunks
@@ -400,7 +403,13 @@ def serve_document(filename: str):
     path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(path, filename=filename)
+    media_type = "application/pdf" if filename.lower().endswith(".pdf") else None
+    return FileResponse(
+        path,
+        filename=filename,
+        media_type=media_type,
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 @app.delete("/documents/{filename}")

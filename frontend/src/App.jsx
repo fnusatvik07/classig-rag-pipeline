@@ -6,8 +6,17 @@ import PdfPreview from "./components/PdfPreview";
 import { sendChat, uploadDocument, fetchDocuments, fetchCacheStats, deleteDocument, exportChatAsMarkdown, resetVectorStore } from "./api";
 import "./App.css";
 
+const HISTORY_KEY = "mychat-history";
+
 export default function App() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showSources, setShowSources] = useState(true);
   const [documents, setDocuments] = useState([]);
@@ -15,13 +24,29 @@ export default function App() {
   const [status, setStatus] = useState("Idle");
   const [view, setView] = useState("chat");
   const [previewDoc, setPreviewDoc] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem("mychat-dark-mode") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [cacheStats, setCacheStats] = useState(null);
 
-  // Apply dark mode to root element
+  // Apply dark mode to root element and persist preference
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    try { localStorage.setItem("mychat-dark-mode", String(darkMode)); } catch {}
   }, [darkMode]);
+
+  // Persist chat messages to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(messages));
+    } catch (e) {
+      console.warn("Failed to save chat history:", e);
+    }
+  }, [messages]);
 
   // Fetch documents on mount
   useEffect(() => {
@@ -45,7 +70,7 @@ export default function App() {
     setStatus("Thinking");
 
     try {
-      const data = await sendChat(question);
+      const data = await sendChat(question, true, selectedDoc);
       setMessages((prev) => [
         ...prev,
         {
@@ -110,6 +135,7 @@ export default function App() {
       await resetVectorStore();
       setDocuments([]);
       setMessages([]);
+      setSelectedDoc(null);
       setStatus("Idle");
     } catch (err) {
       alert(`Reset failed: ${err.message}`);
@@ -127,7 +153,6 @@ export default function App() {
       setDocuments(data.documents);
       if (previewDoc === filename) setPreviewDoc(null);
       if (selectedDoc === filename) setSelectedDoc(null);
-      // Refresh cache stats if on dashboard
       if (view === "dashboard") {
         fetchCacheStats().then(setCacheStats).catch(() => {});
       }
@@ -182,6 +207,8 @@ export default function App() {
             documents={documents}
             previewDoc={previewDoc}
             onPreviewDoc={handlePreviewDoc}
+            selectedDoc={selectedDoc}
+            onSelectDoc={setSelectedDoc}
           />
         ) : (
           <Dashboard

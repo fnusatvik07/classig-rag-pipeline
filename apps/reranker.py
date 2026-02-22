@@ -15,7 +15,7 @@ from .config import (
 
 _pc = Pinecone(api_key=PINECONE_API_KEY)
 
-def rerank(query: str, top_k: int = TOP_K, top_n: int = RERANK_TOP_N) -> List[Dict]:
+def rerank(query: str, top_k: int = TOP_K, top_n: int = RERANK_TOP_N, source_filter: str = None) -> List[Dict]:
     query = query.strip()
     if not query:
         return []
@@ -31,13 +31,16 @@ def rerank(query: str, top_k: int = TOP_K, top_n: int = RERANK_TOP_N) -> List[Di
 
     index = _pc.Index(PINECONE_INDEX_NAME)
 
+    query_params = {
+        "top_k": top_k,
+        "inputs": {"text": query},
+    }
+    if source_filter:
+        query_params["filter"] = {"source": {"$eq": source_filter}}
+
     reranked = index.search(
         namespace=PINECONE_NAMESPACE,
-        query={
-            "top_k": top_k,
-            "inputs": {"text": query},
-        },
-
+        query=query_params,
         rerank={
             "model": PINECONE_RERANK_MODEL,
             "top_n": top_n,

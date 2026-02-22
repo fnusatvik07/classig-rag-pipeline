@@ -3,7 +3,7 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import SuggestedQuestions from "./SuggestedQuestions";
 
-export default function ChatArea({ messages, isLoading, showSources, onSend, documents, previewDoc, onPreviewDoc }) {
+export default function ChatArea({ messages, isLoading, showSources, onSend, documents, previewDoc, onPreviewDoc, selectedDoc, onSelectDoc }) {
   const bottomRef = useRef(null);
 
   // Auto-scroll to latest message
@@ -15,30 +15,42 @@ export default function ChatArea({ messages, isLoading, showSources, onSend, doc
     <div className="chat-area">
       {documents && documents.length > 0 && (
         <div className="doc-toolbar">
-          <span className="doc-toolbar-label">DOCUMENTS</span>
-          <div className="doc-toolbar-chips">
+          <label className="doc-toolbar-label" htmlFor="doc-selector">
+            CHAT WITH
+          </label>
+          <select
+            id="doc-selector"
+            className="doc-selector"
+            value={selectedDoc || ""}
+            onChange={(e) => onSelectDoc(e.target.value || null)}
+          >
+            <option value="">All Documents</option>
             {documents.map((doc) => {
               const name = typeof doc === "string" ? doc : doc.name;
               return (
-                <button
-                  key={name}
-                  className={`doc-chip ${previewDoc === name ? "active" : ""}`}
-                  onClick={() => onPreviewDoc(name)}
-                  title={name}
-                >
-                  📄 {name}
-                </button>
+                <option key={name} value={name}>
+                  {name}
+                </option>
               );
             })}
-          </div>
+          </select>
+          {selectedDoc && (
+            <button
+              className={`doc-chip ${previewDoc === selectedDoc ? "active" : ""}`}
+              onClick={() => onPreviewDoc(selectedDoc)}
+              title="Preview selected document"
+            >
+              Preview
+            </button>
+          )}
         </div>
       )}
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="empty-state">
-            <div className="empty-icon">💬</div>
             <h2>MyChat</h2>
-            <p>Upload a document and start asking questions.</p>
+            <p className="empty-subtitle">Your AI-powered document assistant</p>
+            <p>Upload documents and ask questions to get instant, cited answers.</p>
             <SuggestedQuestions onSelect={onSend} />
           </div>
         )}

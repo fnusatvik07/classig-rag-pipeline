@@ -15,7 +15,7 @@ export default function PdfPreview({ filename, onClose }) {
       </div>
       <iframe
         className="pdf-preview-frame"
-        src={getDocumentUrl(filename)}
+        src={`${getDocumentUrl(filename)}${filename.toLowerCase().endsWith(".pdf") ? "#toolbar=1" : ""}`}
         title={`Preview: ${filename}`}
       />
     </aside>

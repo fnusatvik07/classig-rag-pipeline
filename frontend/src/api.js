@@ -2,15 +2,14 @@
 
 const BASE_URL = "";
 
-export async function sendChat(question, useReranker = true) {
+export async function sendChat(question, useReranker = true, source = null) {
+  const body = { question, use_reranker: useReranker, debug: true };
+  if (source) body.source = source;
+
   const res = await fetch(`${BASE_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question,
-      use_reranker: useReranker,
-      debug: true,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
