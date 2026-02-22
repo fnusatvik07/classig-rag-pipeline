@@ -41,9 +41,9 @@ class CacheBackend(ABC):
 
     @abstractmethod
     def get_semantic(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
-        """Find semantically similar cached question.
+        """Find semantically similar cached question for the same source filter.
         Returns {question, answer, sources, similarity} or None."""
         ...
 
@@ -56,6 +56,7 @@ class CacheBackend(ABC):
         sources_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         """Store a semantic cache entry with its embedding."""
         ...
@@ -66,9 +67,9 @@ class CacheBackend(ABC):
 
     @abstractmethod
     def get_retrieval(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
-        """Find cached retrieval chunks for a similar query.
+        """Find cached retrieval chunks for a similar query with same source filter.
         Returns {question, chunks} or None."""
         ...
 
@@ -80,6 +81,7 @@ class CacheBackend(ABC):
         chunks_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         """Store retrieval results (chunks) for a query."""
         ...

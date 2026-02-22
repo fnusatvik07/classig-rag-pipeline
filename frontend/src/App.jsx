@@ -24,6 +24,7 @@ export default function App() {
   const [status, setStatus] = useState("Idle");
   const [view, setView] = useState("chat");
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [previewWidth, setPreviewWidth] = useState(420);
   const [darkMode, setDarkMode] = useState(() => {
     try {
       return localStorage.getItem("mychat-dark-mode") === "true";
@@ -229,6 +230,8 @@ export default function App() {
               (s) => s.source === previewDoc
             ) || []
           }
+          width={previewWidth}
+          onWidthChange={setPreviewWidth}
         />
       )}
     </div>

@@ -75,6 +75,7 @@ class SQLiteCacheBackend(CacheBackend):
                 question_embedding  BLOB NOT NULL,
                 answer_text         TEXT NOT NULL,
                 sources_json        TEXT NOT NULL,
+                source_filter       TEXT NOT NULL DEFAULT '',
                 doc_version         INTEGER NOT NULL,
                 created_at          REAL NOT NULL,
                 ttl_seconds         INTEGER NOT NULL,
@@ -97,6 +98,7 @@ class SQLiteCacheBackend(CacheBackend):
                 question_text       TEXT NOT NULL,
                 question_embedding  BLOB NOT NULL,
                 chunks_json         TEXT NOT NULL,
+                source_filter       TEXT NOT NULL DEFAULT '',
                 doc_version         INTEGER NOT NULL,
                 created_at          REAL NOT NULL,
                 ttl_seconds         INTEGER NOT NULL,
@@ -105,6 +107,12 @@ class SQLiteCacheBackend(CacheBackend):
             );
         """)
         conn.commit()
+        # Migrate: add source_filter column if missing (existing DBs)
+        for table in ("semantic_cache", "retrieval_cache"):
+            cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+            if "source_filter" not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN source_filter TEXT NOT NULL DEFAULT ''")
+                conn.commit()
         conn.close()
 
     # ── Tier 1: Exact Cache ────────────────────────────────────
@@ -176,7 +184,7 @@ class SQLiteCacheBackend(CacheBackend):
     # ── Tier 2: Semantic Cache ─────────────────────────────────
 
     def get_semantic(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
         conn = self._get_conn()
         now = time.time()
@@ -184,7 +192,9 @@ class SQLiteCacheBackend(CacheBackend):
 
         rows = conn.execute(
             "SELECT id, question_text, question_embedding, answer_text, sources_json, "
-            "doc_version, created_at, ttl_seconds FROM semantic_cache"
+            "source_filter, doc_version, created_at, ttl_seconds FROM semantic_cache "
+            "WHERE source_filter = ?",
+            (source_filter,),
         ).fetchall()
         conn.close()
 
@@ -233,15 +243,16 @@ class SQLiteCacheBackend(CacheBackend):
         sources_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         conn = self._get_conn()
         conn.execute(
             """INSERT INTO semantic_cache
                (question_text, question_embedding, answer_text, sources_json,
-                doc_version, created_at, ttl_seconds, hit_count, last_hit_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)""",
+                source_filter, doc_version, created_at, ttl_seconds, hit_count, last_hit_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)""",
             (question, embedding_to_bytes(embedding), answer, sources_json,
-             doc_version, time.time(), ttl_seconds),
+             source_filter, doc_version, time.time(), ttl_seconds),
         )
         conn.commit()
         conn.close()
@@ -249,7 +260,7 @@ class SQLiteCacheBackend(CacheBackend):
     # ── Tier 3: Retrieval Cache ────────────────────────────────
 
     def get_retrieval(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
         conn = self._get_conn()
         now = time.time()
@@ -257,7 +268,9 @@ class SQLiteCacheBackend(CacheBackend):
 
         rows = conn.execute(
             "SELECT id, question_text, question_embedding, chunks_json, "
-            "doc_version, created_at, ttl_seconds FROM retrieval_cache"
+            "source_filter, doc_version, created_at, ttl_seconds FROM retrieval_cache "
+            "WHERE source_filter = ?",
+            (source_filter,),
         ).fetchall()
         conn.close()
 
@@ -302,15 +315,16 @@ class SQLiteCacheBackend(CacheBackend):
         chunks_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         conn = self._get_conn()
         conn.execute(
             """INSERT INTO retrieval_cache
                (question_text, question_embedding, chunks_json,
-                doc_version, created_at, ttl_seconds, hit_count, last_hit_at)
-               VALUES (?, ?, ?, ?, ?, ?, 0, NULL)""",
+                source_filter, doc_version, created_at, ttl_seconds, hit_count, last_hit_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)""",
             (question, embedding_to_bytes(embedding), chunks_json,
-             doc_version, time.time(), ttl_seconds),
+             source_filter, doc_version, time.time(), ttl_seconds),
         )
         conn.commit()
         conn.close()

@@ -810,8 +810,6 @@
 
 /* ===== PDF Preview Panel ===== */
 .pdf-preview {
-  width: var(--preview-width);
-  min-width: var(--preview-width);
   flex-shrink: 0;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -819,6 +817,24 @@
   flex-direction: column;
   animation: slideIn 0.25s ease;
   height: 100vh;
+  position: relative;
+}
+
+.pdf-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.pdf-resize-handle:hover,
+.pdf-resize-handle:active {
+  background: var(--primary);
 }
 
 @keyframes slideIn {
@@ -870,13 +886,19 @@
 /* ===== PDF Source Cards ===== */
 .pdf-sources {
   border-bottom: 1px solid var(--border);
-  max-height: 240px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 
+.pdf-sources.open {
+  max-height: 260px;
+}
+
 .pdf-sources-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -884,8 +906,22 @@
   letter-spacing: 0.06em;
   color: var(--text-muted);
   background: var(--code-bg);
+  border: none;
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: color 0.15s;
   flex-shrink: 0;
+}
+
+.pdf-sources-header:hover {
+  color: var(--text);
+}
+
+.pdf-sources-arrow {
+  font-size: 0.7rem;
 }
 
 .pdf-sources-list {

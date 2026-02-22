@@ -115,7 +115,7 @@ class RedisCacheBackend(CacheBackend):
     # ── Tier 2: Semantic Cache ─────────────────────────────────
 
     def get_semantic(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
         current_version = self.get_doc_version()
 
@@ -142,6 +142,10 @@ class RedisCacheBackend(CacheBackend):
             if entry.get("doc_version", 0) < current_version:
                 self._redis.delete(key)
                 self._redis.srem(_SEMANTIC_INDEX, member_id)
+                continue
+
+            # Check source filter match
+            if entry.get("source_filter", "") != source_filter:
                 continue
 
             cached_embedding = bytes_to_embedding(
@@ -179,6 +183,7 @@ class RedisCacheBackend(CacheBackend):
         sources_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         entry_id = uuid.uuid4().hex
         key = f"{_SEMANTIC_PREFIX}{entry_id}"
@@ -187,6 +192,7 @@ class RedisCacheBackend(CacheBackend):
             "embedding_hex": embedding_to_bytes(embedding).hex(),
             "answer": answer,
             "sources_json": sources_json,
+            "source_filter": source_filter,
             "doc_version": doc_version,
             "created_at": time.time(),
             "hit_count": 0,
@@ -198,7 +204,7 @@ class RedisCacheBackend(CacheBackend):
     # ── Tier 3: Retrieval Cache ────────────────────────────────
 
     def get_retrieval(
-        self, embedding: list[float], threshold: float
+        self, embedding: list[float], threshold: float, source_filter: str = ""
     ) -> Optional[dict]:
         current_version = self.get_doc_version()
 
@@ -222,6 +228,10 @@ class RedisCacheBackend(CacheBackend):
             if entry.get("doc_version", 0) < current_version:
                 self._redis.delete(key)
                 self._redis.srem(_RETRIEVAL_INDEX, member_id)
+                continue
+
+            # Check source filter match
+            if entry.get("source_filter", "") != source_filter:
                 continue
 
             cached_embedding = bytes_to_embedding(
@@ -257,6 +267,7 @@ class RedisCacheBackend(CacheBackend):
         chunks_json: str,
         doc_version: int,
         ttl_seconds: int,
+        source_filter: str = "",
     ) -> None:
         entry_id = uuid.uuid4().hex
         key = f"{_RETRIEVAL_PREFIX}{entry_id}"
@@ -264,6 +275,7 @@ class RedisCacheBackend(CacheBackend):
             "question": question,
             "embedding_hex": embedding_to_bytes(embedding).hex(),
             "chunks_json": chunks_json,
+            "source_filter": source_filter,
             "doc_version": doc_version,
             "created_at": time.time(),
             "hit_count": 0,

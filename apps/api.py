@@ -215,9 +215,10 @@ def chat_endpoint(req: ChatRequest):
 
         # ── TIER 2: Semantic Match Cache ───────────────────────
         embedding = None
+        source_filter = req.source or ""
         if cache:
             embedding = embed_query(req.question)
-            semantic_hit = cache.get_semantic(embedding, SEMANTIC_CACHE_THRESHOLD)
+            semantic_hit = cache.get_semantic(embedding, SEMANTIC_CACHE_THRESHOLD, source_filter)
 
             if semantic_hit:
                 logger.info(
@@ -234,7 +235,7 @@ def chat_endpoint(req: ChatRequest):
 
         # ── TIER 3: Retrieval Cache ────────────────────────────
         if cache and embedding:
-            retrieval_hit = cache.get_retrieval(embedding, RETRIEVAL_CACHE_THRESHOLD)
+            retrieval_hit = cache.get_retrieval(embedding, RETRIEVAL_CACHE_THRESHOLD, source_filter)
 
             if retrieval_hit:
                 logger.info(
@@ -250,7 +251,7 @@ def chat_endpoint(req: ChatRequest):
                 doc_version = cache.get_doc_version()
                 sources_json = _sources_to_json(sources)
                 cache.set_exact(query_hash, req.question, answer, sources_json, doc_version, EXACT_CACHE_TTL)
-                cache.set_semantic(req.question, embedding, answer, sources_json, doc_version, SEMANTIC_CACHE_TTL)
+                cache.set_semantic(req.question, embedding, answer, sources_json, doc_version, SEMANTIC_CACHE_TTL, source_filter)
 
                 return ChatResponse(
                     answer=answer,
@@ -290,16 +291,17 @@ def chat_endpoint(req: ChatRequest):
             sources_json = _sources_to_json(sources)
             if embedding is None:
                 embedding = embed_query(req.question)
-            if not hasattr(chat_endpoint, '_query_hash'):
-                normalized = normalize_query(req.question)
-                query_hash = hash_query(normalized)
+            normalized = normalize_query(req.question)
+            if req.source:
+                normalized = f"{normalized}|source={req.source}"
+            query_hash = hash_query(normalized)
 
             # Tier 1: exact
             cache.set_exact(query_hash, req.question, answer, sources_json, doc_version, EXACT_CACHE_TTL)
             # Tier 2: semantic
-            cache.set_semantic(req.question, embedding, answer, sources_json, doc_version, SEMANTIC_CACHE_TTL)
+            cache.set_semantic(req.question, embedding, answer, sources_json, doc_version, SEMANTIC_CACHE_TTL, source_filter)
             # Tier 3: retrieval (store raw chunks for future LLM re-generation)
-            cache.set_retrieval(req.question, embedding, json.dumps(chunks), doc_version, RETRIEVAL_CACHE_TTL)
+            cache.set_retrieval(req.question, embedding, json.dumps(chunks), doc_version, RETRIEVAL_CACHE_TTL, source_filter)
 
         # Debug info
         debug_retrieved = None
