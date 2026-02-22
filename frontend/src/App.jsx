@@ -221,7 +221,15 @@ export default function App() {
       </main>
 
       {previewDoc && (
-        <PdfPreview filename={previewDoc} onClose={() => setPreviewDoc(null)} />
+        <PdfPreview
+          filename={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+          sources={
+            messages.findLast((m) => m.role === "assistant")?.sources?.filter(
+              (s) => s.source === previewDoc
+            ) || []
+          }
+        />
       )}
     </div>
   );
