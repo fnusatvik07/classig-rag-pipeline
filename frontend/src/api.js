@@ -48,6 +48,17 @@ export async function fetchDocuments() {
   return res.json();
 }
 
+export async function resetVectorStore() {
+  const res = await fetch(`${BASE_URL}/vectors`, { method: "DELETE" });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Reset failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
 // Get the URL for previewing a document
 export function getDocumentUrl(filename) {
   return `${BASE_URL}/documents/${encodeURIComponent(filename)}`;

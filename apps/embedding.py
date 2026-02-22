@@ -61,6 +61,12 @@ def is_file_ingested(source:str)-> bool:
     return False
 
 
+def delete_all_vectors():
+    """Delete all vectors from the configured Pinecone namespace."""
+    index = _get_or_create_index()
+    index.delete(delete_all=True, namespace=PINECONE_NAMESPACE)
+
+
 def upsert_chunks(records: List[Dict], batch_size:int=96)-> int:
     if not records:
         return 0

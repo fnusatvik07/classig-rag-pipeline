@@ -37,6 +37,8 @@ _RETRIEVAL_PREFIX = "cache:retrieval:"
 _SEMANTIC_INDEX = "cache:semantic:index"
 _RETRIEVAL_INDEX = "cache:retrieval:index"
 _DOC_VERSION_KEY = "cache:metadata:doc_version"
+_DOC_HASH_PREFIX = "doc:hash:"
+_DOC_HASH_INDEX = "doc:hash:index"
 
 
 class RedisCacheBackend(CacheBackend):
@@ -364,3 +366,27 @@ class RedisCacheBackend(CacheBackend):
                     removed += 1
 
         return removed
+
+    # ── Document Hash Deduplication ──────────────────────────────
+
+    def get_document_hash(self, file_hash: str) -> Optional[dict]:
+        key = f"{_DOC_HASH_PREFIX}{file_hash}"
+        data = self._redis.get(key)
+        if data is None:
+            return None
+        return json.loads(data)
+
+    def set_document_hash(self, file_hash: str, metadata: dict) -> None:
+        key = f"{_DOC_HASH_PREFIX}{file_hash}"
+        self._redis.set(key, json.dumps(metadata).encode("utf-8"))
+        self._redis.sadd(_DOC_HASH_INDEX, file_hash.encode("utf-8"))
+
+    def clear_document_hashes(self) -> int:
+        member_ids = self._redis.smembers(_DOC_HASH_INDEX)
+        count = 0
+        for member_id in member_ids:
+            key = f"{_DOC_HASH_PREFIX}{self._str(member_id)}"
+            self._redis.delete(key)
+            count += 1
+        self._redis.delete(_DOC_HASH_INDEX)
+        return count

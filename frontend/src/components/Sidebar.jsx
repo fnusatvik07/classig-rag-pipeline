@@ -15,6 +15,7 @@ export default function Sidebar({
   onToggleDark,
   messageCount,
   onExport,
+  onResetVectors,
 }) {
   return (
     <aside className="sidebar">
@@ -104,6 +105,9 @@ export default function Sidebar({
         </button>
         <button className="btn-clear" onClick={onClearChat}>
           Clear Chat
+        </button>
+        <button className="btn-clear" onClick={onResetVectors}>
+          Reset Vector Store
         </button>
       </div>
     </aside>

@@ -1,7 +1,7 @@
+import hashlib
 import json
 import logging
 import os
-import shutil
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from .ingestion import ingest_document
-from .embedding import upsert_chunks
+from .embedding import upsert_chunks, delete_all_vectors
 from .retrieval import search
 from .reranker import rerank
 from .generation import generate_answer
@@ -330,17 +330,39 @@ async def upload_endpoint(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(allowed_ext):
         raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {allowed_ext}")
 
-    save_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
+        # Read file content for hash deduplication
+        file_content = await file.read()
+        file_hash = hashlib.sha256(file_content).hexdigest()
+
+        # Check for duplicate content
+        cache = get_cache_backend() if CACHE_ENABLED else None
+        if cache:
+            existing = cache.get_document_hash(file_hash)
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Duplicate: this file was already uploaded as '{existing['file_name']}'",
+                )
+
+        # Save file to disk
+        save_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(save_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+            f.write(file_content)
 
         records = ingest_document(save_path)
         upserted = upsert_chunks(records)
 
+        # Store document hash
+        if cache and upserted > 0:
+            cache.set_document_hash(file_hash, {
+                "file_name": file.filename,
+                "file_size": len(file_content),
+                "chunk_count": upserted,
+            })
+
         # Invalidate cache — new documents may change answers
-        if CACHE_ENABLED:
-            cache = get_cache_backend()
+        if cache:
             cache.bump_doc_version()
             logger.info(f"Doc version bumped after upload: {file.filename}")
 
@@ -349,6 +371,8 @@ async def upload_endpoint(file: UploadFile = File(...)):
             chunks=upserted,
             message="Document uploaded and ingested successfully",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -404,3 +428,42 @@ def cache_stats():
 
     cache = get_cache_backend()
     return cache.get_stats()
+
+
+# ── Vector Store Management ───────────────────────────────────
+
+@app.delete("/vectors")
+def reset_vectors():
+    """Delete all vectors from Pinecone namespace, clear cache, and remove uploaded files."""
+    try:
+        # 1. Delete all vectors from Pinecone
+        delete_all_vectors()
+        logger.info("All vectors deleted from Pinecone namespace")
+
+        # 2. Clear all cache tiers
+        cache_cleared = {}
+        doc_hashes_cleared = 0
+        if CACHE_ENABLED:
+            cache = get_cache_backend()
+            cache_cleared = cache.clear_all()
+            doc_hashes_cleared = cache.clear_document_hashes()
+            logger.info(f"Cache cleared: {cache_cleared}, doc hashes: {doc_hashes_cleared}")
+
+        # 3. Remove uploaded files
+        files_removed = 0
+        for f in os.listdir(UPLOAD_DIR):
+            path = os.path.join(UPLOAD_DIR, f)
+            if os.path.isfile(path):
+                os.remove(path)
+                files_removed += 1
+
+        return {
+            "message": "Vector store reset successfully",
+            "vectors_deleted": True,
+            "cache_cleared": cache_cleared,
+            "doc_hashes_cleared": doc_hashes_cleared,
+            "files_removed": files_removed,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

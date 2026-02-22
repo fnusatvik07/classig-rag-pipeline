@@ -110,3 +110,21 @@ class CacheBackend(ABC):
     def cleanup_expired(self) -> int:
         """Remove expired entries (past TTL). Returns total removed count."""
         ...
+
+    # ── Document Hash Deduplication ──────────────────────────────
+
+    @abstractmethod
+    def get_document_hash(self, file_hash: str) -> Optional[dict]:
+        """Check if a file content hash was already uploaded.
+        Returns {file_name, file_size, chunk_count, created_at} or None."""
+        ...
+
+    @abstractmethod
+    def set_document_hash(self, file_hash: str, metadata: dict) -> None:
+        """Store file content hash after successful upload."""
+        ...
+
+    @abstractmethod
+    def clear_document_hashes(self) -> int:
+        """Clear all document hashes (used on vector reset). Returns count removed."""
+        ...

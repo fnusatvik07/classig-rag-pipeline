@@ -16,6 +16,24 @@ export default function ChatMessage({ message, showSources }) {
           <>
             <ReactMarkdown>{message.content}</ReactMarkdown>
 
+            {/* Response metadata */}
+            {message.response_time_ms != null && (
+              <div className="response-meta">
+                <span className="meta-badge meta-time">
+                  {message.response_time_ms.toFixed(0)}ms
+                </span>
+                <span
+                  className={`meta-badge ${
+                    message.cache_hit ? "meta-cache-hit" : "meta-cache-miss"
+                  }`}
+                >
+                  {message.cache_hit
+                    ? `Cache HIT (${message.cache_tier})`
+                    : "Cache MISS"}
+                </span>
+              </div>
+            )}
+
             {/* Feedback buttons */}
             <div className="message-actions">
               <button

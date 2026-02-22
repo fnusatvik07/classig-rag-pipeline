@@ -82,6 +82,15 @@ class SQLiteCacheBackend(CacheBackend):
                 last_hit_at         REAL
             );
 
+            -- Document hash deduplication
+            CREATE TABLE IF NOT EXISTS document_hashes (
+                file_hash   TEXT PRIMARY KEY,
+                file_name   TEXT NOT NULL,
+                file_size   INTEGER NOT NULL,
+                chunk_count INTEGER NOT NULL,
+                created_at  REAL NOT NULL
+            );
+
             -- Tier 3: Retrieval cache
             CREATE TABLE IF NOT EXISTS retrieval_cache (
                 id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -386,3 +395,47 @@ class SQLiteCacheBackend(CacheBackend):
         conn.commit()
         conn.close()
         return total
+
+    # ── Document Hash Deduplication ──────────────────────────────
+
+    def get_document_hash(self, file_hash: str) -> Optional[dict]:
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT file_name, file_size, chunk_count, created_at "
+            "FROM document_hashes WHERE file_hash = ?",
+            (file_hash,),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return {
+            "file_name": row["file_name"],
+            "file_size": row["file_size"],
+            "chunk_count": row["chunk_count"],
+            "created_at": row["created_at"],
+        }
+
+    def set_document_hash(self, file_hash: str, metadata: dict) -> None:
+        conn = self._get_conn()
+        conn.execute(
+            """INSERT OR REPLACE INTO document_hashes
+               (file_hash, file_name, file_size, chunk_count, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (
+                file_hash,
+                metadata["file_name"],
+                metadata["file_size"],
+                metadata["chunk_count"],
+                time.time(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+    def clear_document_hashes(self) -> int:
+        conn = self._get_conn()
+        count = conn.execute("SELECT COUNT(*) FROM document_hashes").fetchone()[0]
+        conn.execute("DELETE FROM document_hashes")
+        conn.commit()
+        conn.close()
+        return count

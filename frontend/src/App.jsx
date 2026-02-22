@@ -3,7 +3,7 @@ import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
 import Dashboard from "./components/Dashboard";
 import PdfPreview from "./components/PdfPreview";
-import { sendChat, uploadDocument, fetchDocuments, exportChatAsMarkdown } from "./api";
+import { sendChat, uploadDocument, fetchDocuments, exportChatAsMarkdown, resetVectorStore } from "./api";
 import "./App.css";
 
 export default function App() {
@@ -44,6 +44,9 @@ export default function App() {
           sources: data.sources,
           retrieved: data.retrieved,
           reranked: data.reranked,
+          cache_hit: data.cache_hit,
+          cache_tier: data.cache_tier,
+          response_time_ms: data.response_time_ms,
         },
       ]);
       setStatus("Idle");
@@ -90,6 +93,21 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleResetVectors = async () => {
+    if (!window.confirm("This will delete ALL vectors, cache, and uploaded files. Continue?")) return;
+    try {
+      setStatus("Resetting");
+      await resetVectorStore();
+      setDocuments([]);
+      setMessages([]);
+      setStatus("Idle");
+    } catch (err) {
+      alert(`Reset failed: ${err.message}`);
+      setStatus("Error");
+      setTimeout(() => setStatus("Idle"), 3000);
+    }
+  };
+
   const handlePreviewDoc = (filename) => {
     setPreviewDoc((prev) => (prev === filename ? null : filename));
   };
@@ -111,6 +129,7 @@ export default function App() {
         onToggleDark={() => setDarkMode((d) => !d)}
         messageCount={messages.length}
         onExport={handleExport}
+        onResetVectors={handleResetVectors}
       />
 
       <main className="main">
