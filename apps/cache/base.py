@@ -1,0 +1,112 @@
+"""
+Abstract base class for cache backends.
+
+Both SQLite and Redis backends implement this interface,
+so the rest of the application doesn't care which one is active.
+Swap via CACHE_BACKEND env var ("sqlite" or "redis").
+"""
+
+from abc import ABC, abstractmethod
+from typing import Optional
+
+
+class CacheBackend(ABC):
+    """Interface that all cache backends must implement."""
+
+    # ── Tier 1: Exact Query Cache ──────────────────────────────
+    # Hash of normalized query → full answer + sources
+    # O(1) lookup, catches identical questions
+
+    @abstractmethod
+    def get_exact(self, query_hash: str) -> Optional[dict]:
+        """Lookup by query hash. Returns {question, answer, sources} or None."""
+        ...
+
+    @abstractmethod
+    def set_exact(
+        self,
+        query_hash: str,
+        question: str,
+        answer: str,
+        sources_json: str,
+        doc_version: int,
+        ttl_seconds: int,
+    ) -> None:
+        """Store an exact cache entry."""
+        ...
+
+    # ── Tier 2: Semantic Cache ─────────────────────────────────
+    # Embedding similarity → full answer + sources
+    # O(N) cosine scan, catches rephrasings (cosine ≥ threshold)
+
+    @abstractmethod
+    def get_semantic(
+        self, embedding: list[float], threshold: float
+    ) -> Optional[dict]:
+        """Find semantically similar cached question.
+        Returns {question, answer, sources, similarity} or None."""
+        ...
+
+    @abstractmethod
+    def set_semantic(
+        self,
+        question: str,
+        embedding: list[float],
+        answer: str,
+        sources_json: str,
+        doc_version: int,
+        ttl_seconds: int,
+    ) -> None:
+        """Store a semantic cache entry with its embedding."""
+        ...
+
+    # ── Tier 3: Retrieval Cache ────────────────────────────────
+    # Embedding similarity → cached retrieval chunks
+    # Skips Pinecone call but still runs LLM generation
+
+    @abstractmethod
+    def get_retrieval(
+        self, embedding: list[float], threshold: float
+    ) -> Optional[dict]:
+        """Find cached retrieval chunks for a similar query.
+        Returns {question, chunks} or None."""
+        ...
+
+    @abstractmethod
+    def set_retrieval(
+        self,
+        question: str,
+        embedding: list[float],
+        chunks_json: str,
+        doc_version: int,
+        ttl_seconds: int,
+    ) -> None:
+        """Store retrieval results (chunks) for a query."""
+        ...
+
+    # ── Management ─────────────────────────────────────────────
+
+    @abstractmethod
+    def get_doc_version(self) -> int:
+        """Get the current document version counter."""
+        ...
+
+    @abstractmethod
+    def bump_doc_version(self) -> int:
+        """Increment and return the new document version."""
+        ...
+
+    @abstractmethod
+    def clear_all(self) -> dict:
+        """Clear all 3 cache tiers. Returns {"exact": N, "semantic": N, "retrieval": N}."""
+        ...
+
+    @abstractmethod
+    def get_stats(self) -> dict:
+        """Return per-tier entry counts, hit counts, and backend info."""
+        ...
+
+    @abstractmethod
+    def cleanup_expired(self) -> int:
+        """Remove expired entries (past TTL). Returns total removed count."""
+        ...

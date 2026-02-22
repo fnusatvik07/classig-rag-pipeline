@@ -10,6 +10,7 @@ export default defineConfig({
       "/ingest": "http://localhost:8000",
       "/documents": "http://localhost:8000",
       "/health": "http://localhost:8000",
+      "/cache": "http://localhost:8000",
     },
   },
 });
