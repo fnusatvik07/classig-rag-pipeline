@@ -16,6 +16,7 @@ export default function Sidebar({
   messageCount,
   onExport,
   onResetVectors,
+  onDeleteDoc,
 }) {
   return (
     <aside className="sidebar">
@@ -68,6 +69,16 @@ export default function Sidebar({
                     title="Preview PDF"
                   >
                     👁
+                  </button>
+                  <button
+                    className="doc-preview-btn doc-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteDoc(name);
+                    }}
+                    title="Delete document"
+                  >
+                    🗑
                   </button>
                 </li>
               );

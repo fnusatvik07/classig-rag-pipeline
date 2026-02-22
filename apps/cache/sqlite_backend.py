@@ -432,6 +432,16 @@ class SQLiteCacheBackend(CacheBackend):
         conn.commit()
         conn.close()
 
+    def remove_document_hash_by_name(self, file_name: str) -> bool:
+        conn = self._get_conn()
+        cursor = conn.execute(
+            "DELETE FROM document_hashes WHERE file_name = ?", (file_name,)
+        )
+        conn.commit()
+        removed = cursor.rowcount > 0
+        conn.close()
+        return removed
+
     def clear_document_hashes(self) -> int:
         conn = self._get_conn()
         count = conn.execute("SELECT COUNT(*) FROM document_hashes").fetchone()[0]

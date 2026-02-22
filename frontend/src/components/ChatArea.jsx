@@ -3,7 +3,7 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import SuggestedQuestions from "./SuggestedQuestions";
 
-export default function ChatArea({ messages, isLoading, showSources, onSend }) {
+export default function ChatArea({ messages, isLoading, showSources, onSend, documents, previewDoc, onPreviewDoc }) {
   const bottomRef = useRef(null);
 
   // Auto-scroll to latest message
@@ -13,6 +13,26 @@ export default function ChatArea({ messages, isLoading, showSources, onSend }) {
 
   return (
     <div className="chat-area">
+      {documents && documents.length > 0 && (
+        <div className="doc-toolbar">
+          <span className="doc-toolbar-label">DOCUMENTS</span>
+          <div className="doc-toolbar-chips">
+            {documents.map((doc) => {
+              const name = typeof doc === "string" ? doc : doc.name;
+              return (
+                <button
+                  key={name}
+                  className={`doc-chip ${previewDoc === name ? "active" : ""}`}
+                  onClick={() => onPreviewDoc(name)}
+                  title={name}
+                >
+                  📄 {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="empty-state">

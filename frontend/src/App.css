@@ -61,7 +61,8 @@
 
 .status-badge.thinking,
 .status-badge.uploading,
-.status-badge.resetting {
+.status-badge.resetting,
+.status-badge.deleting {
   background: #eff6ff;
   color: var(--primary);
   animation: pulse 1.5s ease-in-out infinite;
@@ -75,7 +76,8 @@
 [data-theme="dark"] .status-badge.idle { background: #052e16; }
 [data-theme="dark"] .status-badge.thinking,
 [data-theme="dark"] .status-badge.uploading,
-[data-theme="dark"] .status-badge.resetting { background: #1e1b4b; }
+[data-theme="dark"] .status-badge.resetting,
+[data-theme="dark"] .status-badge.deleting { background: #1e1b4b; }
 [data-theme="dark"] .status-badge.error { background: #450a0a; }
 
 @keyframes pulse {
@@ -215,6 +217,11 @@
 .doc-preview-btn:hover {
   opacity: 1 !important;
   background: rgba(255, 255, 255, 0.1);
+}
+
+.doc-delete-btn:hover {
+  opacity: 1 !important;
+  background: rgba(248, 113, 113, 0.2) !important;
 }
 
 /* Session info */
@@ -989,4 +996,144 @@
 
 [data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: #3f3f46;
+}
+
+/* ===== Dashboard Stats Grid ===== */
+.dashboard-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.dashboard-section-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.stats-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.stats-card:hover {
+  border-color: var(--primary);
+}
+
+.stats-card-header {
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--code-bg);
+}
+
+.stats-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.stats-label {
+  color: var(--text-muted);
+}
+
+.stats-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ===== Dashboard Delete Button ===== */
+.dashboard-card-delete {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.15s;
+}
+
+.dashboard-card-delete:hover {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ===== Document Toolbar (Chat View) ===== */
+.doc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.doc-toolbar-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.doc-toolbar-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.doc-chip {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  color: var(--text);
+}
+
+.doc-chip:hover {
+  border-color: var(--primary);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.doc-chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ===== Responsive Stats Grid ===== */
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

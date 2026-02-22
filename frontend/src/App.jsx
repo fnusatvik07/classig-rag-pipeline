@@ -3,7 +3,7 @@ import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
 import Dashboard from "./components/Dashboard";
 import PdfPreview from "./components/PdfPreview";
-import { sendChat, uploadDocument, fetchDocuments, exportChatAsMarkdown, resetVectorStore } from "./api";
+import { sendChat, uploadDocument, fetchDocuments, fetchCacheStats, deleteDocument, exportChatAsMarkdown, resetVectorStore } from "./api";
 import "./App.css";
 
 export default function App() {
@@ -16,6 +16,7 @@ export default function App() {
   const [view, setView] = useState("chat");
   const [previewDoc, setPreviewDoc] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [cacheStats, setCacheStats] = useState(null);
 
   // Apply dark mode to root element
   useEffect(() => {
@@ -28,6 +29,15 @@ export default function App() {
       .then((data) => setDocuments(data.documents))
       .catch(() => {});
   }, []);
+
+  // Fetch cache stats when switching to dashboard
+  useEffect(() => {
+    if (view === "dashboard") {
+      fetchCacheStats()
+        .then(setCacheStats)
+        .catch(() => {});
+    }
+  }, [view]);
 
   const handleSend = async (question) => {
     setMessages((prev) => [...prev, { role: "user", content: question }]);
@@ -108,6 +118,27 @@ export default function App() {
     }
   };
 
+  const handleDeleteDocument = async (filename) => {
+    if (!window.confirm(`Delete "${filename}"? This removes the file, its vectors, and cached data.`)) return;
+    try {
+      setStatus("Deleting");
+      await deleteDocument(filename);
+      const data = await fetchDocuments();
+      setDocuments(data.documents);
+      if (previewDoc === filename) setPreviewDoc(null);
+      if (selectedDoc === filename) setSelectedDoc(null);
+      // Refresh cache stats if on dashboard
+      if (view === "dashboard") {
+        fetchCacheStats().then(setCacheStats).catch(() => {});
+      }
+      setStatus("Idle");
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+      setStatus("Error");
+      setTimeout(() => setStatus("Idle"), 3000);
+    }
+  };
+
   const handlePreviewDoc = (filename) => {
     setPreviewDoc((prev) => (prev === filename ? null : filename));
   };
@@ -130,6 +161,7 @@ export default function App() {
         messageCount={messages.length}
         onExport={handleExport}
         onResetVectors={handleResetVectors}
+        onDeleteDoc={handleDeleteDocument}
       />
 
       <main className="main">
@@ -147,9 +179,17 @@ export default function App() {
             isLoading={isLoading}
             showSources={showSources}
             onSend={handleSend}
+            documents={documents}
+            previewDoc={previewDoc}
+            onPreviewDoc={handlePreviewDoc}
           />
         ) : (
-          <Dashboard documents={documents} onPreview={handlePreviewDoc} />
+          <Dashboard
+            documents={documents}
+            onPreview={handlePreviewDoc}
+            onDelete={handleDeleteDocument}
+            cacheStats={cacheStats}
+          />
         )}
       </main>
 

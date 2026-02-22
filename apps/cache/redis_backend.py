@@ -381,6 +381,19 @@ class RedisCacheBackend(CacheBackend):
         self._redis.set(key, json.dumps(metadata).encode("utf-8"))
         self._redis.sadd(_DOC_HASH_INDEX, file_hash.encode("utf-8"))
 
+    def remove_document_hash_by_name(self, file_name: str) -> bool:
+        member_ids = self._redis.smembers(_DOC_HASH_INDEX)
+        for member_id in member_ids:
+            key = f"{_DOC_HASH_PREFIX}{self._str(member_id)}"
+            data = self._redis.get(key)
+            if data is not None:
+                entry = json.loads(data)
+                if entry.get("file_name") == file_name:
+                    self._redis.delete(key)
+                    self._redis.srem(_DOC_HASH_INDEX, member_id)
+                    return True
+        return False
+
     def clear_document_hashes(self) -> int:
         member_ids = self._redis.smembers(_DOC_HASH_INDEX)
         count = 0

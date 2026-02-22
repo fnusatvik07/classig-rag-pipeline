@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from .ingestion import ingest_document
-from .embedding import upsert_chunks, delete_all_vectors
+from .embedding import upsert_chunks, delete_all_vectors, delete_vectors_by_source
 from .retrieval import search
 from .reranker import rerank
 from .generation import generate_answer
@@ -401,6 +401,39 @@ def serve_document(filename: str):
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, filename=filename)
+
+
+@app.delete("/documents/{filename}")
+def delete_document(filename: str):
+    """Delete a single document: file + Pinecone vectors + document hash."""
+    path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        # 1. Delete vectors from Pinecone
+        vectors_deleted = delete_vectors_by_source(filename)
+        logger.info(f"Deleted {vectors_deleted} vectors for {filename}")
+
+        # 2. Remove document hash
+        hash_removed = False
+        if CACHE_ENABLED:
+            cache = get_cache_backend()
+            hash_removed = cache.remove_document_hash_by_name(filename)
+            cache.bump_doc_version()
+            logger.info(f"Doc version bumped after deleting: {filename}")
+
+        # 3. Delete file from disk
+        os.remove(path)
+
+        return {
+            "message": f"Document '{filename}' deleted successfully",
+            "vectors_deleted": vectors_deleted,
+            "hash_removed": hash_removed,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Cache Management Endpoints ─────────────────────────────────

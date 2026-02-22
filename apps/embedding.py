@@ -67,6 +67,23 @@ def delete_all_vectors():
     index.delete(delete_all=True, namespace=PINECONE_NAMESPACE)
 
 
+def delete_vectors_by_source(source: str) -> int:
+    """Delete all vectors for a specific source document.
+
+    IDs follow the pattern '{filename}:: chunk-{N}'.
+    Uses index.list(prefix=...) to find them, then batch deletes.
+    """
+    index = _get_or_create_index()
+    all_ids = []
+    for id_batch in index.list(prefix=f"{source}:: chunk-", namespace=PINECONE_NAMESPACE):
+        all_ids.extend(id_batch)
+    if not all_ids:
+        return 0
+    for i in range(0, len(all_ids), 1000):
+        index.delete(ids=all_ids[i:i + 1000], namespace=PINECONE_NAMESPACE)
+    return len(all_ids)
+
+
 def upsert_chunks(records: List[Dict], batch_size:int=96)-> int:
     if not records:
         return 0

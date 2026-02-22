@@ -1,4 +1,4 @@
-export default function Dashboard({ documents, onPreview }) {
+export default function Dashboard({ documents, onPreview, onDelete, cacheStats }) {
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -18,7 +18,78 @@ export default function Dashboard({ documents, onPreview }) {
 
   return (
     <div className="dashboard">
-      <div className="dashboard-header">
+      {/* Stats Cards */}
+      {cacheStats && (
+        <>
+          <div className="dashboard-section-header">
+            <h2>System Overview</h2>
+          </div>
+          <div className="stats-grid">
+            <div className="stats-card">
+              <div className="stats-card-header">System</div>
+              <div className="stats-card-body">
+                <div className="stats-row">
+                  <span className="stats-label">Backend</span>
+                  <span className="stats-value">{cacheStats.backend}</span>
+                </div>
+                <div className="stats-row">
+                  <span className="stats-label">Doc Version</span>
+                  <span className="stats-value">{cacheStats.doc_version}</span>
+                </div>
+                <div className="stats-row">
+                  <span className="stats-label">Documents</span>
+                  <span className="stats-value">{documents.length}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-card">
+              <div className="stats-card-header">Exact Cache</div>
+              <div className="stats-card-body">
+                <div className="stats-row">
+                  <span className="stats-label">Entries</span>
+                  <span className="stats-value">{cacheStats.exact?.entries ?? 0}</span>
+                </div>
+                <div className="stats-row">
+                  <span className="stats-label">Total Hits</span>
+                  <span className="stats-value">{cacheStats.exact?.total_hits ?? 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-card">
+              <div className="stats-card-header">Semantic Cache</div>
+              <div className="stats-card-body">
+                <div className="stats-row">
+                  <span className="stats-label">Entries</span>
+                  <span className="stats-value">{cacheStats.semantic?.entries ?? 0}</span>
+                </div>
+                <div className="stats-row">
+                  <span className="stats-label">Total Hits</span>
+                  <span className="stats-value">{cacheStats.semantic?.total_hits ?? 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-card">
+              <div className="stats-card-header">Retrieval Cache</div>
+              <div className="stats-card-body">
+                <div className="stats-row">
+                  <span className="stats-label">Entries</span>
+                  <span className="stats-value">{cacheStats.retrieval?.entries ?? 0}</span>
+                </div>
+                <div className="stats-row">
+                  <span className="stats-label">Total Hits</span>
+                  <span className="stats-value">{cacheStats.retrieval?.total_hits ?? 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Document Library */}
+      <div className="dashboard-section-header" style={{ marginTop: cacheStats ? 32 : 0 }}>
         <h2>Document Library</h2>
         <span className="dashboard-count">
           {documents.length} document{documents.length !== 1 ? "s" : ""}
@@ -52,6 +123,13 @@ export default function Dashboard({ documents, onPreview }) {
                 title="Preview document"
               >
                 👁
+              </button>
+              <button
+                className="dashboard-card-delete"
+                onClick={() => onDelete(doc.name)}
+                title="Delete document"
+              >
+                🗑
               </button>
             </div>
           ))}

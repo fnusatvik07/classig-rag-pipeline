@@ -125,6 +125,11 @@ class CacheBackend(ABC):
         ...
 
     @abstractmethod
+    def remove_document_hash_by_name(self, file_name: str) -> bool:
+        """Remove a document hash entry by file name. Returns True if found and removed."""
+        ...
+
+    @abstractmethod
     def clear_document_hashes(self) -> int:
         """Clear all document hashes (used on vector reset). Returns count removed."""
         ...

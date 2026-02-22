@@ -48,6 +48,30 @@ export async function fetchDocuments() {
   return res.json();
 }
 
+export async function fetchCacheStats() {
+  const res = await fetch(`${BASE_URL}/cache/stats`);
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch cache stats");
+  }
+
+  return res.json();
+}
+
+export async function deleteDocument(filename) {
+  const res = await fetch(
+    `${BASE_URL}/documents/${encodeURIComponent(filename)}`,
+    { method: "DELETE" }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Delete failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
 export async function resetVectorStore() {
   const res = await fetch(`${BASE_URL}/vectors`, { method: "DELETE" });
 
